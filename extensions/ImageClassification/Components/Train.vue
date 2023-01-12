@@ -102,7 +102,7 @@ export default {
       "savePretrained",
       "saveTfjs",
       "saveEdgeTPU",
-      "saveLabelFile",
+      "saveModelLabel"
     ]),
     ...mapActions("server", ["connect", "convert_model"]),
     ...mapActions("dataset", ["addBlobToFs", "exists"]),
@@ -112,10 +112,10 @@ export default {
         "_blank"
       );
     },
-    downloadFile: async function (url) {
+    downloadFile: async function (url, outType="blob") {
       try {
         let tempFile = await axios.get(url, {
-          responseType: "blob",
+          responseType: outType,
           onDownloadProgress : (pg)=>{
             this.downloadProgress = Math.round((pg.loaded * 100) / pg.total);
           },
@@ -170,14 +170,9 @@ export default {
       this.downloadIndex = 1;
       this.downloadMaxFile = 3;
       //============= download label =============//
-      await this.downloadAndSave(
-        `${this.url}/projects/${projectId}/output/labels.txt`,
-        "labels.txt"
-      );
-      let labelFileEntry = await this.exists(`${projectId}/labels.txt`);
-      if (labelFileEntry.isFile === true) {
-        this.saveLabelFile(this.getBaseURL + "/labels.txt");
-      }
+      let labelsContent = await downloadFile(`${this.url}/projects/${projectId}/output/labels.txt`, "text");
+      let labels = labelsContent.split("\n").map(str=>str.trim());
+      this.saveModelLabel(labels);
       //============= download tfjs ==============//
       await this.downloadTfjs(projectId);
       //============= download edgetpu =============//

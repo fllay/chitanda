@@ -8,9 +8,10 @@ export const state = () => ({
     projectType: null, //id of extension
     lastUpdate: null,
     dataset: [],
-    labels: [],
     model: null,
     labelFile: "",
+    modelLabel: [],
+    labels: "",
     pretrained: "",
     tfjs: "",
     edgetpu: "",
@@ -71,6 +72,9 @@ export const mutations = {
   },
   saveLabelFile(state, filename) {
     state.project.labelFile = filename;
+  },
+  saveModelLabel(state, labels) {
+    state.project.modelLabel = labels;
   },
   saveAnchors(state, anchors) {
     state.project.anchors = anchors;
