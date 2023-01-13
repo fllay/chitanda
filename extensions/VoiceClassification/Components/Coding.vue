@@ -77,6 +77,7 @@ import "xterm/css/xterm.css";
 import axios from "axios";
 
 import ContinueVoiceCapture from '~/components/InputConnection/ContinueVoiceCapture.vue';
+import runner from "../runner.worker.js?worker";
 
 export default {
   name: "BlocklyComponent",
@@ -92,6 +93,7 @@ export default {
       isRunning: false,
       result: "",
       image: null,
+      worker: null
     };
   },
   methods: {
@@ -107,6 +109,22 @@ export default {
         this.isRunning = false;
         this.stop();
       }
+    },
+    async processCommand(event){
+      console.log(event);
+      if(event.data.command == "PRINT"){
+        this.term.write(event.data.msg);
+      }else if(event.data.command == "REQUEST"){
+        if(event.data.data == "MODEL"){
+          let modelInfo = await this.initModel();
+          this.worker.postMessage({ command : "RESPONSE", subcommand : "MODEL", data: modelInfo});
+        }
+      }
+    },
+    onWorkerError(err){
+      console.log("worker error : ");
+      console.log(err);
+      console.log(err.error);
     },
     async initModel() {
       var modelJson = await axios.get(this.project.tfjs);
@@ -125,13 +143,17 @@ export default {
       let downloadedWeight = await Promise.all(downloadPromises);
       weights = downloadedWeight.map((el) => el.data);
       let weightData = this.$helper.concatenateArrayBuffers(weights);
-      this.model = await tf.loadLayersModel(
-        tf.io.fromMemory(
-          modelJson.data.modelTopology,
-          modelJson.data.weightsManifest[0].weights,
-          weightData
-        )
-      );
+      return {
+        modelJson : modelJson.data,
+        weight: weightData
+      }
+      // this.model = await tf.loadLayersModel(
+      //   tf.io.fromMemory(
+      //     modelJson.data.modelTopology,
+      //     modelJson.data.weightsManifest[0].weights,
+      //     weightData
+      //   )
+      // );
     },
     async getLabels() {
       const __label_res = await axios.get(this.project.labelFile);
@@ -147,21 +169,24 @@ export default {
     run : async function() {
       if(this.currentDevice == "BROWSER"){
         this.term.write("Running ...\r\n");
-        console.log("run!!!!");
+        //========== start worker ==============//
+        console.log(this.worker);
+        this.worker = new runner();
+        this.worker.onerror = this.onWorkerError.bind(this);
+        this.worker.onmessage = this.processCommand.bind(this);
         //========== load tfjs model ===========//
         this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("1");
         var code = this.project.code;
         var codeAsync = `(async () => {
-          this.term.write("Running ...\\r\\n");
           ${code}
           this.isRunning = false;
           this.result = [];
-          this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("0");
-          this.term.write("\\r\\nFinish\\r\\n");
         })();`;
         console.log(codeAsync);
+        console.log(this.worker);
         try {
-          eval(codeAsync);
+          this.worker.postMessage({ command: "RUN", code: codeAsync });
+          //eval(codeAsync);
         } catch (error) {
           console.log(error);
         }
@@ -185,8 +210,11 @@ export default {
         //========== terminate continue voice =========//
         this.$refs.capture.stopListening();
         this.$refs.capture.endRecord();
-        //========== load tfjs model ===========//
-        //this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("0");
+        //========== stop robot ===========//
+        this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("0");
+        //========== stop web worker ======//
+        //this.worker.onmessage = null;
+        this.worker.terminate();
       }else if(this.currentDevice == "ROBOT"){
         try{
           if(this.socket && this.socket.readyState !== WebSocket.CLOSED){
