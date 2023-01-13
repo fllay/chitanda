@@ -194,6 +194,7 @@ export default {
     },
     endRecord : function(){
       this.recording = false;
+      this.$emit("onImageData", this.mfccCtx.getImageData( 0, 0, this.mfccCanvas.width, this.mfccCanvas.height));
       this.mfccCanvas.toBlob(this.onImageReady, "image/jpeg", 0.8);
       //this.voiceCtx.clearRect(0, 0, 224, 224);
       this.prevMX = 0;

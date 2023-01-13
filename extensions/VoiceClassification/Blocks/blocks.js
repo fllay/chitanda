@@ -42,15 +42,18 @@ export default (Blockly, that) => {
   };
   Blockly.JavaScript["tfjs_wakeword_detection_classify"] = function (block) {
     var code = `
-let image = await requestData("VOICE");
-let imageUrl = self.URL.createObjectURL(image);
-__image = await load_image(imageUrl);
+while(imageFromMain == null){
+  await new Promise(r => setTimeout(r,100));
+}
+let __image = new ImageData(imageFromMain.data, imageFromMain.width, imageFromMain.height);
 __image_tensor = await tf.browser.fromPixels(__image);
-__res = await __classify(this.model, __image_tensor);
+__res = await __classify(__image_tensor);
 __data = __res.dataSync();
 __maxIndex = __res.argMax(1).dataSync()[0];
 this.result = __labels[__maxIndex] + " (" + __data[__maxIndex].toFixed(3) + ")";
-console("\\rclassify result = " + __labels[__maxIndex] + ", prob = " + __data[__maxIndex].toFixed(3));
+//postMessage({command:"PRINT", msg : "\\rclassify result = " + __labels[__maxIndex] + ", prob = " + __data[__maxIndex].toFixed(3) });
+postMessage({command:"PRINT", msg : "classify result = " + __labels[__maxIndex] + ", prob = " + __data[__maxIndex].toFixed(3) + "\\r\\n" });
+imageFromMain = null;
     `;
     return code;
   };
@@ -158,8 +161,12 @@ console("\\rclassify result = " + __labels[__maxIndex] + ", prob = " + __data[__
     },
   };
   Blockly.JavaScript["term_print"] = function (block) {
-    var text = block.getFieldValue("text");
-    var code = `postMessage({command:"PRINT", msg : "${text}\\r\\n"});\n`;
+    var value_text = Blockly.JavaScript.valueToCode(
+      block,
+      "text",
+      Blockly.JavaScript.ORDER_NONE
+    );
+    var code = `postMessage({command:"PRINT", msg : ${value_text}+"\\r\\n"});\n`;
     return code;
   };
 };

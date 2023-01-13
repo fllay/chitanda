@@ -18,7 +18,7 @@
             :captureKey="false"
             :classify="result"
           >
-            <continue-voice-capture ref="capture" @onImage="onImageReady"></continue-voice-capture>
+            <continue-voice-capture ref="capture" @onImageData="onImageDataReady"></continue-voice-capture>
           </simulator-controller>
           <div v-else-if="currentDevice == 'ROBOT'" style="width: 40%; display: flex; align-items: center;">
             <img v-if="isRunning" style="width:100%" :src="`${streamUrl}?topic=/output/image_detected&type=ros_compressed`">
@@ -97,8 +97,12 @@ export default {
     };
   },
   methods: {
-    onImageReady: function(image){
+    onImageDataReady: function(image){
       this.image = image;
+      console.log(image);
+      if(this.worker){
+        this.worker.postMessage({command : "WRITE", subcommand: "VOICE", data : image});
+      }
     },
     //==========================//
     handleRun : async function() {
@@ -111,13 +115,19 @@ export default {
       }
     },
     async processCommand(event){
-      console.log(event);
       if(event.data.command == "PRINT"){
         this.term.write(event.data.msg);
+      }else if(event.data.command == "MOVE"){
+        let lin = event.data.lin;
+        let ang = event.data.ang;
+        this.$refs.simulator.$refs.gameInstance.contentWindow.VK_MovementDirec(lin,ang);
       }else if(event.data.command == "REQUEST"){
         if(event.data.data == "MODEL"){
           let modelInfo = await this.initModel();
           this.worker.postMessage({ command : "RESPONSE", subcommand : "MODEL", data: modelInfo});
+        }
+        if(event.data.data == "VOICE"){
+          this.worker.postMessage({ command : "RESPONSE", subcommand : "VOICE", data: this.image});
         }
       }
     },
@@ -170,10 +180,13 @@ export default {
       if(this.currentDevice == "BROWSER"){
         this.term.write("Running ...\r\n");
         //========== start worker ==============//
-        console.log(this.worker);
         this.worker = new runner();
         this.worker.onerror = this.onWorkerError.bind(this);
         this.worker.onmessage = this.processCommand.bind(this);
+        let labels = this.project.modelLabel;
+        if(Array.isArray(labels) && !labels.length){
+          labels = await this.getLabels();
+        }
         //========== load tfjs model ===========//
         this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("1");
         var code = this.project.code;
@@ -183,9 +196,8 @@ export default {
           this.result = [];
         })();`;
         console.log(codeAsync);
-        console.log(this.worker);
         try {
-          this.worker.postMessage({ command: "RUN", code: codeAsync });
+          this.worker.postMessage({ command: "RUN", code: codeAsync, labels : labels });
           //eval(codeAsync);
         } catch (error) {
           console.log(error);
