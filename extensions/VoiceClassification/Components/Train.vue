@@ -183,7 +183,7 @@ export default {
       //============= download edgetpu =============//
       this.downloadIndex += 1;
       await this.downloadAndSave(
-        `${this.url}/projects/${projectId}/output/Classifier_best_val_accuracy_edgetpu.tflite`,
+        `${this.url}/projects/${projectId}/output/Classifier_edgetpu.tflite`,
         "model_edgetpu.tflite"
       );
       let modelEdgeEntry = await this.exists(
@@ -219,7 +219,7 @@ export default {
           {
             project_id: projectId,
             url: this.url,
-            model_file: "Classifier_best_val_accuracy"
+            model_file: "Classifier"
           }
         );
         if(serverDownloadModel && serverDownloadModel.data && serverDownloadModel.data.result === "OK"){
