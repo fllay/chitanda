@@ -97,9 +97,19 @@ export default {
     };
   },
   methods: {
+    imageDataFromSource: async function (source) {
+      const image = Object.assign(new Image(), { src: source });
+      await new Promise(resolve => image.addEventListener('load', () => resolve()));
+      const context = Object.assign(document.createElement('canvas'), {
+          width: image.width,
+          height: image.height
+      }).getContext('2d');
+      context.imageSmoothingEnabled = false;
+      context.drawImage(image, 0, 0);
+      return context.getImageData(0, 0, image.width, image.height);
+    },
     onImageDataReady: function(image){
       this.image = image;
-      console.log(image);
       if(this.worker){
         this.worker.postMessage({command : "WRITE", subcommand: "VOICE", data : image});
       }
@@ -124,10 +134,23 @@ export default {
       }else if(event.data.command == "REQUEST"){
         if(event.data.data == "MODEL"){
           let modelInfo = await this.initModel();
+          console.log("======== request model ==========");
+          console.log(modelInfo);
           this.worker.postMessage({ command : "RESPONSE", subcommand : "MODEL", data: modelInfo});
         }
         if(event.data.data == "VOICE"){
           this.worker.postMessage({ command : "RESPONSE", subcommand : "VOICE", data: this.image});
+        }
+        if(event.data.data == "DATASETS"){
+          this.worker.postMessage({ command : "RESPONSE", subcommand : "DATASETS", data: this.dataset});
+        }
+        if(event.data.data == "MFCC"){
+          let imageUrl = `${this.getBaseURL}/${event.data.id}_mfcc.jpg`;
+          let imageData = await this.imageDataFromSource(imageUrl);
+          this.worker.postMessage({ command : "RESPONSE", subcommand : "MFCC", data: imageData});
+        }
+        if(event.data.data == "PROJECT"){
+          this.worker.postMessage({command : "RESPONSE", subcommand : "PROJECT", data: this.project});
         }
       }
     },
@@ -261,6 +284,8 @@ export default {
   },
   computed: {
     ...mapState("project", ["project"]),
+    ...mapState("dataset", ["dataset"]),
+    ...mapGetters("dataset", ["getBaseURL"]),
     ...mapState(["currentDevice", "serverUrl", "streamUrl","terminalUrl","terminalWebsocket"]),
     ...mapState("server", ["url"]),
     blocks(){

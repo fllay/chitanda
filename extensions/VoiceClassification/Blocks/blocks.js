@@ -11,22 +11,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_wakeword_detection_init_model"] = function (block) {
-    var code = `
-      postMessage({command:"PRINT", msg : "Loading model\\r\\n"});
-      await loadingModel();
-      postMessage({command:"PRINT", msg : "Loading labels\\r\\n"});
-      postMessage({command:"PRINT", msg : "Label : " + __labels.join(",") + "\\r\\n"});
-      let inputShape = __model.layers[0].inputSpec[0].shape;
-      postMessage({command:"PRINT", msg : "Model Input Shape : " + inputShape.join(",") + "\\r\\n"});
-      postMessage({command:"PRINT", msg : "Preloading model\\r\\n"});
-      const zeroTensor = tf.zeros([1, inputShape[1], inputShape[2], inputShape[3]], 'int32');
-      const result = await __model.predict(zeroTensor);
-      const res = await result.data();
-      result.dispose();
-      zeroTensor.dispose();
-      postMessage({command:"PRINT", msg : "Preload model success\\r\\n"});
-      postMessage({command:"PRINT", msg : "Model loaded\\r\\n"});
-    `;
+    var code = `initModel();\n`;
     return code;
   };
 
@@ -41,20 +26,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_wakeword_detection_classify"] = function (block) {
-    var code = `
-while(imageFromMain == null){
-  await new Promise(r => setTimeout(r,100));
-}
-let __image = new ImageData(imageFromMain.data, imageFromMain.width, imageFromMain.height);
-__image_tensor = await tf.browser.fromPixels(__image);
-__res = await __classify(__image_tensor);
-__data = __res.dataSync();
-__maxIndex = __res.argMax(1).dataSync()[0];
-this.result = __labels[__maxIndex] + " (" + __data[__maxIndex].toFixed(3) + ")";
-//postMessage({command:"PRINT", msg : "\\rclassify result = " + __labels[__maxIndex] + ", prob = " + __data[__maxIndex].toFixed(3) });
-postMessage({command:"PRINT", msg : "classify result = " + __labels[__maxIndex] + ", prob = " + __data[__maxIndex].toFixed(3) + "\\r\\n" });
-imageFromMain = null;
-    `;
+    var code = `clssifyVoice();\n`;
     return code;
   };
 

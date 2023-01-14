@@ -4,7 +4,7 @@ import axios from "axios";
 const robotIp =
   location.hostname === "raspberrypi.local" ||
   location.hostname === "192.168.2.1" ||
-  location.hostname === "localhost" ||
+  //location.hostname === "localhost" ||
   location.hostname.startsWith("192.168.") ||
   location.hostname.startsWith("10.0.");
 

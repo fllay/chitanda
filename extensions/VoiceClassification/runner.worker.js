@@ -8,7 +8,7 @@ let __model = null;
 let __labels = [];
 
 let __raw_image = "";
-let imageFromMain = null;
+let imageData = null;
 let __image = null;
 let __image_tensor = null;
 let __res = null;
@@ -16,12 +16,16 @@ let __data = null;
 let __maxIndex = 0;
 
 let responseCallback = null;
-let responseCommand = new Promise((resolve) => (responseCallback = resolve));
 let requestCommand = null;
 
-const requestData = async function (cmd) {
+const requestData = async function (cmd, addition) {
   requestCommand = cmd;
-  postMessage({ command: "REQUEST", data: cmd });
+  let postMessageData = { command: "REQUEST", data: cmd };
+  if (addition) {
+    postMessageData = Object.assign(postMessageData, addition);
+  }
+  postMessage(postMessageData);
+  let responseCommand = new Promise((resolve) => (responseCallback = resolve));
   let res = await responseCommand;
   return res;
 };
@@ -58,13 +62,87 @@ const __classify = async function (img) {
   return res;
 };
 
-onmessage = (event) => {
+const initModel = async function () {
+  postMessage({ command: "PRINT", msg: "Loading model\r\n" });
+  await loadingModel();
+  postMessage({ command: "PRINT", msg: "Loading labels\r\n" });
+  postMessage({
+    command: "PRINT",
+    msg: "Label : " + __labels.join(",") + "\\r\\n",
+  });
+  let inputShape = __model.layers[0].inputSpec[0].shape;
+  postMessage({
+    command: "PRINT",
+    msg: "Model Input Shape : " + inputShape.join(",") + "\r\n",
+  });
+  postMessage({ command: "PRINT", msg: "Preloading model\r\n" });
+  const zeroTensor = tf.zeros(
+    [1, inputShape[1], inputShape[2], inputShape[3]],
+    "int32"
+  );
+  const result = await __model.predict(zeroTensor);
+  const res = await result.data();
+  result.dispose();
+  zeroTensor.dispose();
+  postMessage({ command: "PRINT", msg: "Preload model success\r\n" });
+  postMessage({ command: "PRINT", msg: "Model loaded\r\n" });
+};
+
+const clssifyVoice = async function () {
+  while (__image == null) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  __image_tensor = await tf.browser.fromPixels(__image);
+  __res = await __classify(__image_tensor);
+  __data = __res.dataSync();
+  __maxIndex = __res.argMax(1).dataSync()[0];
+  this.result =
+    __labels[__maxIndex] + " (" + __data[__maxIndex].toFixed(3) + ")";
+  //postMessage({command:"PRINT", msg : "\\rclassify result = " + __labels[__maxIndex] + ", prob = " + __data[__maxIndex].toFixed(3) });
+  postMessage({
+    command: "PRINT",
+    msg:
+      "classify result = " +
+      __labels[__maxIndex] +
+      ", prob = " +
+      __data[__maxIndex].toFixed(3) +
+      "\\r\\n",
+  });
+  __image = null;
+};
+
+const evaluateAllDataset = async function () {
+  await initModel();
+  let dataset = await requestData("DATASETS");
+  let corrected = 0;
+  let failed = 0;
+  for (let dt of dataset.data) {
+    let id = dt.id;
+    let image = await requestData("MFCC", { id: id });
+    let image_tensor = await tf.browser.fromPixels(image);
+    let res = await __classify(image_tensor);
+    let data = res.dataSync();
+    let maxIndex = res.argMax(1).dataSync()[0];
+    if (__labels[maxIndex] == dt.class) {
+      corrected += 1;
+    } else {
+      failed += 1;
+    }
+    postMessage({
+      command: "PRINT",
+      msg: `Correct : ${corrected} , Failed : ${failed}\r\n`,
+    });
+  }
+};
+
+onmessage = async (event) => {
   if (event.data.command == "RUN") {
     sourceCode = event.data.code;
     __labels = event.data.labels;
     if (!processing) {
       processing = true;
-      process();
+      await evaluateAllDataset();
+      //process();
     }
   } else if (event.data.command == "RESPONSE") {
     if (event.data.subcommand == requestCommand) {
@@ -72,7 +150,7 @@ onmessage = (event) => {
     }
   } else if (event.data.command == "WRITE") {
     if (event.data.subcommand == "VOICE") {
-      imageFromMain = event.data.data;
+      __image = event.data.data;
     }
   }
 };
@@ -83,7 +161,7 @@ const process = function () {
   } catch (err) {
     postMessage({
       command: "PRINT",
-      msg: "ERROR !!! \\r\\n" + err.message,
+      msg: "ERROR !!! \r\n" + err.message,
     });
   }
 };
