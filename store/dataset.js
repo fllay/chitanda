@@ -23,7 +23,7 @@ export const filter = (mutation) => {
 };
 
 export const mutations = {
-  setDatset(state, dataset) {
+  setDataset(state, dataset) {
     state.dataset = dataset;
   },
   setDatasetData(state, data) {
@@ -143,7 +143,7 @@ export const actions = {
     }
     let dirEntry = await prepareDataset(this._vm, dataset);
     dataset.baseURL = dirEntry.toURL();
-    commit("setDatset", dataset);
+    commit("setDataset", dataset);
   },
   // async addFileToFs({ commit, state, dispatch }, file) {
   //   if (!this._vm.$fs) {
@@ -338,7 +338,7 @@ export const actions = {
     console.log("Restore dataset ...");
     let dirEntry = await storage.getDirectory(this._vm.$fs, dataset.project);
     dataset.baseURL = dirEntry.toURL();
-    commit("setDatset", dataset);
+    commit("setDataset", dataset);
   },
   async clearDataset({ commit, state }) {
     console.log("clear dataset : ", state.dataset.project);

@@ -74,6 +74,8 @@ export default {
     project(project){
       if(!this.selectedMenu && project.id){
         this.selectedMenu = 1;
+      }else{
+        this.selectedMenu = 0;
       }
     }
   }

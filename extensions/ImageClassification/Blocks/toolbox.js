@@ -26,7 +26,7 @@ export default `<xml>
   <category name="Text" colour="%{BKY_TEXTS_HUE}">
     <block type="text"></block>
     <block type="text_length"></block>
-    <block type="text_print"></block>
+    <block type="term_print"></block>
   </category>
   <category name="Variables" custom="VARIABLE" colour="%{BKY_VARIABLES_HUE}">
     </category>

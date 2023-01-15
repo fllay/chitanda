@@ -7,7 +7,8 @@
       @ok="deleteProject"
       :ok-disabled="!projectState"
   >
-    <form @submit.stop.prevent="">
+    <p v-if="currentDevice=='BROWSER'" class="p-notice-color">ข้อมูลโปรเจคนี้ทั้งหมดจะหายไป! ต้องการที่จะลบโปรเจคหรือไม่ ?</p>
+    <form v-else @submit.stop.prevent="">
       <b-form-group label="Project type">
         <b-form-select
           id="project-type"
@@ -16,9 +17,8 @@
           required
         ></b-form-select>
       </b-form-group>
+      <p class="p-notice-color small">* เลือกโปรเจคที่ต้องการลบ</p>
     </form>
-    <p class="p-notice-color small">* เลือกโปรเจคที่ต้องการลบ</p>
-    
   </b-modal>
 </template>
 
@@ -45,18 +45,53 @@ export default {
       'isLoading',
       'isSaving',
     ]),
+    ...mapState(['currentDevice']),
     projectState() {
-      return this.projectToDelete ? true : false
+      if(this.currentDevice == "BROWSER"){
+        return this.project.id ? true : false;
+      }else{
+        return this.projectToDelete ? true : false;
+      }
     }
   },
   methods : {
+    ...mapMutations("project", ["setProject"]),
+    ...mapMutations("dataset",["setDataset"]),
+    ...mapActions("dataset", ["clearDataset"]),
     clearForm(){
       this.selectType = null;
       this.projectToDelete = null;
       this.projectList = [];
     },
-    deleteProject(){
-
+    async deleteProject(){
+      if(this.currentDevice == "BROWSER"){
+        this.setDataset({
+          project: "",
+          datasetType: null,
+          data: [],
+          baseURL: ""
+        });
+        await this.clearDataset();
+        this.setProject({
+          name: "",
+          description: "",
+          id: null,
+          projectType: null,
+          lastUpdate: null,
+          dataset: [],
+          model: null,
+          labelFile: "",
+          modelLabel: [],
+          labels: "",
+          pretrained: "",
+          tfjs: "",
+          edgetpu: "",
+          options: {},
+          code: "",
+          workspace: "",
+          anchors: [],
+        });
+      }
     },
     fetchProject(){
 

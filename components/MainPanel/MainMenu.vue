@@ -14,16 +14,16 @@
     <div
       data-md-tooltip="บันทึกข้อมูล"
       class="btn-base save"
-      @click="saveProject"
+      @click="()=>{ if(project.id){ saveProject(); } }"
       :disabled="isLoading || isSaving || isOpening"
     >
       <b-spinner v-if="isSaving" small />
     </div>
     <div
-      :data-md-tooltip="isBrowser? false : 'ลบ Project'"
+      :data-md-tooltip="'ลบ Project'"
       class="btn-base delete"
       variant="danger"
-      :disabled="isLoading || isSaving || isBrowser"
+      :disabled="isLoading || isSaving"
       v-b-modal.delete-project-modal
     />
   </div>
@@ -33,6 +33,7 @@ import { mapState, mapActions } from 'vuex'
 export default {
   computed: {
     ...mapState('project', [
+      'project',
       'newProjectModal',
       'listProjectModal',
       'isLoading',

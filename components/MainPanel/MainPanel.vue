@@ -92,9 +92,13 @@
         <li
           :class="{
             current: selectedMenu == 4,
-            inactive: currentDevice == 'BROWSER' && project.tfjs == '',
+            inactive: currentDevice == 'BROWSER' && !project.tfjs,
           }"
-          @click="handleTabChange(4)"
+          @click="
+            if (project.id && project.tfjs) {
+              handleTabChange(4);
+            }
+          "
         >
           <img src="~/assets/images/UI/png/code.png" alt="" srcset="" />
         </li>

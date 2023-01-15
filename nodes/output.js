@@ -10,7 +10,7 @@ export default {
     {
       name: "validate_matric",
       description: "Criteria metric to save data",
-      options: ["val_accuracy", "recall", "mAP", "loss"], //[{text:"xx",value:"yyy"}]
+      options: ["val_accuracy", "recall", "mAP", "val_loss"], //[{text:"xx",value:"yyy"}]
       type: "string",
       default: "accuracy",
     },

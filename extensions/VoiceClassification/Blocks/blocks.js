@@ -11,7 +11,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_wakeword_detection_init_model"] = function (block) {
-    var code = `initModel();\n`;
+    var code = `await initModel();\n`;
     return code;
   };
 
@@ -26,7 +26,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_wakeword_detection_classify"] = function (block) {
-    var code = `clssifyVoice();\n`;
+    var code = `await classifyVoice();\n`;
     return code;
   };
 

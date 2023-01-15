@@ -170,7 +170,7 @@ export default {
       this.downloadIndex = 1;
       this.downloadMaxFile = 3;
       //============= download label =============//
-      let labelsContent = await downloadFile(`${this.url}/projects/${projectId}/output/labels.txt`, "text");
+      let labelsContent = await this.downloadFile(`${this.url}/projects/${projectId}/output/labels.txt`, "text");
       console.log("----- download labels------");
       console.log(labelsContent);
       let labels = labelsContent.replace(/\r/g,'').split("\n").map(str=>str.trim());

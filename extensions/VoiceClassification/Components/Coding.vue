@@ -16,7 +16,6 @@
             ref="simulator"
             :showController="false"
             :captureKey="false"
-            :classify="result"
           >
             <continue-voice-capture ref="capture" @onImageData="onImageDataReady"></continue-voice-capture>
           </simulator-controller>
@@ -77,7 +76,7 @@ import "xterm/css/xterm.css";
 import axios from "axios";
 
 import ContinueVoiceCapture from '~/components/InputConnection/ContinueVoiceCapture.vue';
-import runner from "../runner.worker.js?worker";
+import runner from "../voice.worker.js";
 
 export default {
   name: "BlocklyComponent",
@@ -180,13 +179,6 @@ export default {
         modelJson : modelJson.data,
         weight: weightData
       }
-      // this.model = await tf.loadLayersModel(
-      //   tf.io.fromMemory(
-      //     modelJson.data.modelTopology,
-      //     modelJson.data.weightsManifest[0].weights,
-      //     weightData
-      //   )
-      // );
     },
     async getLabels() {
       const __label_res = await axios.get(this.project.labelFile);

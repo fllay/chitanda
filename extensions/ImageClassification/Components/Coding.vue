@@ -74,6 +74,8 @@ import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import axios from "axios";
 
+import runner from "../classify.worker.js";
+
 export default {
   name: "BlocklyComponent",
   components: {
@@ -86,6 +88,9 @@ export default {
       model: null,
       isRunning: false,
       result: "",
+      worker: null,
+      canvas : null,
+      ctx : null,  
     };
   },
   methods: {
@@ -97,6 +102,45 @@ export default {
         this.isRunning = false;
         this.stop();
       }
+    },
+    getImageData(src){
+      return new Promise((resolve,reject)=>{
+        //let imgStr = "data:image/jpeg;base64," + this.$refs.simulator.$refs.gameInstance.contentWindow.ImageBase64();
+        let image = new Image();
+        image.onload = ()=>{
+          this.canvas.width = image.width;
+          this.canvas.height = image.height;
+          this.ctx.drawImage(image,0,0);
+          resolve(this.ctx.getImageData(0, 0, image.width, image.height));
+        };
+        image.src = src;
+      });
+    },
+    async processCommand(event){
+      if(event.data.command == "PRINT"){
+        this.term.write(event.data.msg);
+      }else if(event.data.command == "MOVE"){
+        let lin = event.data.lin;
+        let ang = event.data.ang;
+        this.$refs.simulator.$refs.gameInstance.contentWindow.VK_MovementDirec(lin,ang);
+      }else if(event.data.command == "REQUEST"){
+        if(event.data.data == "MODEL"){
+          let modelInfo = await this.initModel();
+          console.log("======== request model ==========");
+          console.log(modelInfo);
+          this.worker.postMessage({ command : "RESPONSE", subcommand : "MODEL", data: modelInfo});
+        }
+        if(event.data.data == "IMAGE"){
+          let imgStr = "data:image/jpeg;base64," + this.$refs.simulator.$refs.gameInstance.contentWindow.ImageBase64();
+          let image = await this.getImageData(imgStr);
+          this.worker.postMessage({command : "RESPONSE", subcommand : "IMAGE", data: image});
+        }
+      }
+    },
+    onWorkerError(err){
+      console.log("worker error : ");
+      console.log(err);
+      console.log(err.error);
     },
     async initModel() {
       var modelJson = await axios.get(this.project.tfjs);
@@ -115,14 +159,12 @@ export default {
       let downloadedWeight = await Promise.all(downloadPromises);
       weights = downloadedWeight.map((el) => el.data);
       let weightData = this.$helper.concatenateArrayBuffers(weights);
-      this.model = await tf.loadLayersModel(
-        tf.io.fromMemory(
-          modelJson.data.modelTopology,
-          modelJson.data.weightsManifest[0].weights,
-          weightData
-        )
-      );
+      return {
+        modelJson : modelJson.data,
+        weight: weightData
+      }
     },
+
     async getLabels() {
       const __label_res = await axios.get(this.project.labelFile);
       const __labels_text = __label_res.data;
@@ -136,21 +178,27 @@ export default {
     },
     run : async function() {
       if(this.currentDevice == "BROWSER"){
-        console.log("run!!!!");
+        this.term.write("Running ...\r\n");
+        //========== start worker ==============//
+        this.worker = new runner();
+        this.worker.onerror = this.onWorkerError.bind(this);
+        this.worker.onmessage = this.processCommand.bind(this);
+        let labels = this.project.modelLabel;
+        if(Array.isArray(labels) && !labels.length){
+          labels = await this.getLabels();
+        }
         //========== load tfjs model ===========//
         this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("1");
         var code = this.project.code;
         var codeAsync = `(async () => {
-          this.term.write("Running ...\\r\\n");
           ${code}
           this.isRunning = false;
-          this.result = "";
-          this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("0");
-          this.term.write("\\r\\nFinish\\r\\n");
+          this.result = [];
         })();`;
         console.log(codeAsync);
         try {
-          eval(codeAsync);
+          this.worker.postMessage({ command: "RUN", code: codeAsync, labels : labels });
+          //eval(codeAsync);
         } catch (error) {
           console.log(error);
         }
@@ -168,8 +216,10 @@ export default {
     stop() {
       console.log("stop!!!");
       if(this.currentDevice == "BROWSER"){
-        //========== load tfjs model ===========//
         this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("0");
+        //========== stop web worker ======//
+        //this.worker.onmessage = null;
+        this.worker.terminate();
       }else if(this.currentDevice == "ROBOT"){
         try{
           if(this.socket && this.socket.readyState !== WebSocket.CLOSED){
@@ -231,6 +281,9 @@ export default {
     console.log("model tfjs path : ", this.project.tfjs);
     if(this.currentDevice == "BROWSER"){
       this.term.write("$ ");
+      this.canvas = document.createElement('canvas');
+      this.ctx = this.canvas.getContext('2d');
+      
     }else if(this.currentDevice == "ROBOT"){
       try{
         this.socket = new WebSocket(this.terminalWebsocket);
