@@ -173,7 +173,7 @@ export default {
       let labelsContent = await this.downloadFile(`${this.url}/projects/${projectId}/output/labels.txt`, "text");
       console.log("----- download labels------");
       console.log(labelsContent);
-      let labels = labelsContent.replace(/\r/g,'').split("\n").map(str=>str.trim());
+      let labels = labelsContent.replace(/\r/g,'').split("\n").map(str=>str.trim()).filter(Boolean);
       console.log(labels);
       this.saveModelLabel(labels);
       //============= download tfjs ==============//
