@@ -50,7 +50,11 @@ export default {
   },
   async created(){
     console.log("web page created");
-    await this.getCurrentWifi();
+    if(this.currentDevice == "BROWSER"){
+      console.log("Browser Mode");
+    }else{
+      await this.getCurrentWifi();
+    }
   },
   computed: {
     ...mapState('project', [
@@ -59,7 +63,7 @@ export default {
       'isLoading',
       'isSaving',
     ]),
-    ...mapState(['currentWifi','connectWifiModal','isRunning'])
+    ...mapState(['currentDevice','currentWifi','connectWifiModal','isRunning'])
   },
   methods: {
     ...mapActions(["getCurrentWifi"]),

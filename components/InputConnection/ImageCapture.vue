@@ -11,20 +11,14 @@
         @click="nextCamera"
       ></b-avatar>
     </div>
-    
     <vue-web-cam
-        v-show="deviceType == 'WEBCAM'"
         :width="width"
         height="auto"
         ref="webcam"
         @cameras="onCameras"
         @started="onStarted"
         @stopped="onStoped"
-        :deviceId="
-          captureDevices.length > 0
-            ? captureDevices[currentCaptureDeviceIndex].deviceId
-            : null
-        "
+        :deviceId="captureDevice"
     />
     <div v-if="deviceType == 'STREAM'">
       <b-img
@@ -40,6 +34,8 @@
 <script>
 import { mapState, mapActions, mapMutations, mapGetters } from "vuex";
 export default {
+  components:{
+  },
   props: {
     source: {
       type: String,
@@ -63,6 +59,7 @@ export default {
     };
   },
   created() {
+    console.log("cccccccccccccccccccccc");
     // add robot device
     if (this.currentDevice == "ROBOT") {
       this.captureDevices.push(this.streamUrl + '?topic=/output/image_raw&type=ros_compressed');
@@ -83,6 +80,14 @@ export default {
         return "STREAM";
       }else if(curr == "SIM"){
         return "SIM";
+      }
+    },
+    captureDevice(){
+      console.log('capture device change');
+      if(Array.isArray(this.captureDevices) && this.captureDevices.length > 0){
+        return this.captureDevices[this.currentCaptureDeviceIndex];
+      }else{
+        return null;
       }
     }
   },
