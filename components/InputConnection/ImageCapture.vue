@@ -59,7 +59,6 @@ export default {
     };
   },
   created() {
-    console.log("cccccccccccccccccccccc");
     // add robot device
     if (this.currentDevice == "ROBOT") {
       this.captureDevices.push(this.streamUrl + '?topic=/output/image_raw&type=ros_compressed');
