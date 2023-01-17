@@ -27,6 +27,7 @@
 import Blockly, { Block } from "blockly";
 import blocklyPython from "blockly/python";
 import blocklyJavascript from "blockly/javascript";
+import CustomCategory from "./Blocks/CustomBlocklyToolbox";
 import Toolbox from "./Blocks/Toolbox";
 import BlocklyPythonGenerator from "./Blocks/BlocklyPythonGenerator";
 import { mapState, mapActions, mapMutations, mapGetters } from "vuex";
@@ -52,6 +53,12 @@ export default {
     };
   },
   mounted() {
+    Blockly.registry.register(
+      Blockly.registry.Type.TOOLBOX_ITEM,
+      Blockly.ToolboxCategory.registrationName,
+      CustomCategory, 
+      true
+    );
     BlocklyPythonGenerator(Blockly, this);
     if (this.blocks) {
       this.blocks(Blockly, this);
@@ -121,3 +128,39 @@ export default {
   },
 };
 </script>
+
+
+<style>
+/* Makes our label white. */
+.blocklyTreeLabel {
+  color: white;
+  font-size: 18px;
+  font-family: inherit;
+  margin-left: 5px;
+}
+/* Adds padding around the group of categories and separators. */
+.blocklyToolboxContents {
+  padding: .5em;
+}
+/* Adds space between the categories, rounds the corners and adds space around the label. */
+.blocklyTreeRow {
+  padding: 3px;
+  margin-bottom: .5em;
+  border-radius: 4px;
+}
+/* Changes color of the icon to white. */
+.customIcon {
+  color: white;
+}
+/* Stacks the icon on top of the label. */
+.blocklyTreeRowContentContainer {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding : 5px 5px 5px 8px;
+}
+.blocklyTreeRow {
+  height: initial;
+}
+
+</style>
