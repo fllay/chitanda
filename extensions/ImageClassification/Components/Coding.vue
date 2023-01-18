@@ -18,7 +18,6 @@
             :captureKey="false"
             :classify="result"
           >
-            <image-source-streamer ref="streamer"></image-source-streamer>
           </simulator-controller>
           <div v-else-if="currentDevice == 'ROBOT'" style="width: 40%; display: flex; align-items: center;">
             <img v-if="isRunning" style="width:100%" :src="`${streamUrl}?topic=/output/image_detected&type=ros_compressed`">
