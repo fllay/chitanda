@@ -17,7 +17,9 @@
             :showController="false"
             :captureKey="false"
             :classify="result"
-          ></simulator-controller>
+          >
+            <continue-voice-capture ref="capture"></continue-voice-capture>
+          </simulator-controller>
           <div v-else-if="currentDevice == 'ROBOT'" style="width: 40%; display: flex; align-items: center;">
             <img v-if="isRunning" style="width:100%" :src="`${streamUrl}?topic=/output/image_detected&type=ros_compressed`">
             <img v-else style="width:100%" :src="`${streamUrl}?topic=/output/image_raw&type=ros_compressed`">
@@ -75,12 +77,14 @@ import "xterm/css/xterm.css";
 import axios from "axios";
 
 import runner from "../classify.worker.js";
+import ContinueVoiceCapture from '~/components/InputConnection/ContinueVoiceCapture.vue';
 
 export default {
   name: "BlocklyComponent",
   components: {
     BlocklyCode,
     SimulatorController,
+    ContinueVoiceCapture
   },
   data() {
     return {
@@ -135,6 +139,10 @@ export default {
           let image = await this.getImageData(imgStr);
           this.worker.postMessage({command : "RESPONSE", subcommand : "IMAGE", data: image});
         }
+      }else if(event.data.command == "TERMINATED"){
+        this.term.write(event.data.msg);
+        this.isRunning = false;
+        this.stop();
       }
     },
     onWorkerError(err){
@@ -192,8 +200,7 @@ export default {
         var code = this.project.code;
         var codeAsync = `(async () => {
           ${code}
-          this.isRunning = false;
-          this.result = [];
+          postMessage({ command: "TERMINATED", msg: "Terminated\\r\\n" });
         })();`;
         console.log(codeAsync);
         try {
