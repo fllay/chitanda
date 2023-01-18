@@ -18,7 +18,7 @@
             :captureKey="false"
             :classify="result"
           >
-            <continue-voice-capture ref="capture"></continue-voice-capture>
+            <image-source-streamer ref="streamer"></image-source-streamer>
           </simulator-controller>
           <div v-else-if="currentDevice == 'ROBOT'" style="width: 40%; display: flex; align-items: center;">
             <img v-if="isRunning" style="width:100%" :src="`${streamUrl}?topic=/output/image_detected&type=ros_compressed`">
@@ -76,15 +76,15 @@ import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import axios from "axios";
 
+import ImageSourceStreamer from "~/components/InputConnection/ImageSourceStreamer.vue";
 import runner from "../classify.worker.js";
-import ContinueVoiceCapture from '~/components/InputConnection/ContinueVoiceCapture.vue';
 
 export default {
   name: "BlocklyComponent",
   components: {
     BlocklyCode,
     SimulatorController,
-    ContinueVoiceCapture
+    ImageSourceStreamer
   },
   data() {
     return {
