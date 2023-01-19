@@ -1,42 +1,14 @@
 <template>
   <div class="game-container">
-    <div v-show="classify || bbox.length" class="display-controller">
-      <div v-show="bbox.length" class="bboxes" ref="boxContainer">
-        <div
-          v-for="(box, i) in boxes"
-          :key="i"
-          class="bbox"
-          :style="{
-            left: box.x1 + 'px',
-            top: box.y1 + 'px',
-            width: box.x2 - box.x1 + 'px',
-            height: box.y2 - box.y1 + 'px',
-          }"
-        >
-          <span class="label-box">{{ box.label }}</span>
-        </div>
-      </div>
-      <div class="classify-result">{{ classify }}</div>
-    </div>
     <iframe
       ref="gameInstance"
       width="100%"
-      height="100%"
+      height="505px"
       scorlling="no"
       border="0"
       src="/VKBuild/index.html"
       frameborder="0"
     />
-
-    <div v-if="showController" class="game-controller">
-      <b-avatar
-        icon="x-circle-fill"
-        :size="52"
-        button
-        class="ml-4"
-        @click="$emit('close')"
-      ></b-avatar>
-    </div>
     <slot :instance="$refs"></slot>
   </div>
 </template>
@@ -153,9 +125,12 @@ export default {
 </script>
 <style scoped>
 .game-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
+  background-color: #231f20;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
 }
 .display-controller {
   pointer-events: none;
