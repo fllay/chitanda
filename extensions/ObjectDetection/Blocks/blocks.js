@@ -21,55 +21,7 @@ export default (Blockly, that) => {
   Blockly.JavaScript["tfjs_yolo_init_model"] = function (block) {
     var iou_threshold = block.getFieldValue("iot_threshold");
     var obj_threshold = block.getFieldValue("object_threshold");
-    var code = `
-      const MAX_BOXES = 10;
-      this.term.write("Loading model\\r\\n");
-      await this.initModel();
-      this.term.write("Model loaded\\r\\nLoading label : ");
-      const __labels = await this.getLabels();
-      this.term.write(__labels.join(",") + "\\r\\n");
-      this.term.write("Anchors : ");
-      const __anchors = this.project.anchors;
-      this.term.write(__anchors.join(",") + "\\r\\n");
-      let inputShape = this.model.layers[0].inputSpec[0].shape;
-      this.term.write("Model Input Shape : " + inputShape.join(",") + "\\r\\n");
-      this.term.write("Preloading model\\r\\n");
-      const zeroTensor = tf.zeros([1, inputShape[1], inputShape[2], inputShape[3]], 'int32');
-      const result = await this.model.predict(zeroTensor);
-      const res = await result.data();
-      result.dispose();
-      zeroTensor.dispose();
-      this.term.write("Preload model success\\r\\n");
-      const load_image = function(url){
-        return new Promise((resolve, reject) => {
-          const im = new Image();
-          im.crossOrigin = 'anonymous';
-          im.src = url;
-          im.onload = () => {
-            resolve(im)
-          }
-        });
-      };
-      const __detect = async function(model, img){
-        let inputShape = model.layers[0].inputSpec[0].shape;
-        const batched = tf.tidy(()=>{
-          const normalized = tf.add(tf.mul(tf.cast(img, 'float32'), (2 / 255.0)), -1); //min -1 to max 1
-          let resized = tf.image.resizeBilinear(normalized, [inputShape[1], inputShape[2]], true); //alignCorners = true;
-          const batched = tf.reshape(resized, [-1, inputShape[1], inputShape[2], 3]); //return tf.expandDims(img);
-          return batched;
-        });
-        let res = await model.predict(batched);
-        //TODO : check img.shape, may be cast to [img.shape[1],img.shape[0]]
-        //console.log("img shape = ", img.shape);
-        let boxes = await yolo.postProcess(res, __anchors, __labels.length, __labels, [img.shape[0],img.shape[1]], MAX_BOXES, ${obj_threshold}, ${iou_threshold});
-        return boxes;
-      }
-      let __raw_image = "";
-      let __image = null;
-      let __image_tensor = null;
-      let __bboxes = [];
-      this.term.write("Model loaded\\r\\n");
-    `;
+    var code = `await initModel(${iou_threshold}, ${obj_threshold});\n`;
     return code;
   };
 
@@ -84,25 +36,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_yolo_detect"] = function (block) {
-    var code = `
-      __raw_image = "data:image/jpeg;base64," + this.$refs.simulator.$refs.gameInstance.contentWindow.ImageBase64();
-      __image = await load_image(__raw_image);
-      __image_tensor = await tf.browser.fromPixels(__image);
-      __bboxes = await __detect(this.model, __image_tensor);
-      this.result = __bboxes;
-      this.term.write("\\rdetection result, found box(es) = " + __bboxes.length);
-      if(this.result.length){
-        this.term.write(" (0 [" + 
-          " x1:" + __bboxes[0].left.toFixed(1) + 
-          " ,y1:" + __bboxes[0].top.toFixed(1) +
-          " ,x2:" + __bboxes[0].right.toFixed(1) +
-          " ,y2:" + __bboxes[0].bottom.toFixed(1) +
-          " ,area:" + __bboxes[0].area.toFixed(2) +
-          " ,label:" + __bboxes[0].class +
-          " ,prob:" + __bboxes[0].score.toFixed(4) +
-        " ])" );
-      }
-    `;
+    var code = `await detect()\n`;
     return code;
   };
 
@@ -196,14 +130,161 @@ export default (Blockly, that) => {
   Blockly.JavaScript["move"] = function (block) {
     var number_lin = block.getFieldValue("lin");
     var number_ang = block.getFieldValue("ang");
-    var code =
-      "this.$refs.simulator.$refs.gameInstance.contentWindow.VK_MovementDirec(" +
-      number_lin +
-      " ," +
-      number_ang +
-      ");\n";
+    var code = `postMessage({ command : "MOVE", lin : ${number_lin}, ang : ${number_ang} });\n`;
     return code;
   };
+
+  Blockly.Blocks["move_forward_in"] = {
+    init: function () {
+      this.appendValueInput("speed")
+        .setCheck("Number")
+        .appendField("Move forward speed");
+      this.appendValueInput("duration")
+        .setCheck("Number")
+        .appendField("duration");
+      this.appendDummyInput().appendField("ms");
+      this.setPreviousStatement(true, null);
+      this.setNextStatement(true, null);
+      this.setColour(230);
+      this.setTooltip("move robot ");
+      this.setHelpUrl("");
+    },
+  };
+  Blockly.JavaScript["move_forward_in"] = function (block) {
+    var value_speed = Blockly.JavaScript.valueToCode(
+      block,
+      "speed",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var value_duration = Blockly.JavaScript.valueToCode(
+      block,
+      "duration",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var code = `postMessage({ command : "MOVE", lin : ${value_speed}, ang : 0 });
+await new Promise(r => setTimeout(r,${value_duration}));
+postMessage({ command : "MOVE", lin : 0, ang : 0 });
+`;
+    return code;
+  };
+
+  Blockly.Blocks["move_backward_in"] = {
+    init: function () {
+      this.appendValueInput("speed")
+        .setCheck("Number")
+        .appendField("Move backward speed");
+      this.appendValueInput("duration")
+        .setCheck("Number")
+        .appendField("duration");
+      this.appendDummyInput().appendField("ms");
+      this.setPreviousStatement(true, null);
+      this.setNextStatement(true, null);
+      this.setColour(230);
+      this.setTooltip("move robot ");
+      this.setHelpUrl("");
+    },
+  };
+  Blockly.JavaScript["move_backward_in"] = function (block) {
+    var value_speed = Blockly.JavaScript.valueToCode(
+      block,
+      "speed",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var value_duration = Blockly.JavaScript.valueToCode(
+      block,
+      "duration",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var code = `postMessage({ command : "MOVE", lin : -${value_speed}, ang : 0 });
+await new Promise(r => setTimeout(r,${value_duration}));
+postMessage({ command : "MOVE", lin : 0, ang : 0 });
+`;
+    return code;
+  };
+
+  Blockly.Blocks["move_turnleft_in"] = {
+    init: function () {
+      this.appendValueInput("speed")
+        .setCheck("Number")
+        .appendField("Turn Left speed");
+      this.appendValueInput("duration")
+        .setCheck("Number")
+        .appendField("duration");
+      this.appendDummyInput().appendField("ms");
+      this.setPreviousStatement(true, null);
+      this.setNextStatement(true, null);
+      this.setColour(230);
+      this.setTooltip("90 deg ~ 1700ms");
+      this.setHelpUrl("");
+    },
+  };
+  Blockly.JavaScript["move_turnleft_in"] = function (block) {
+    var value_speed = Blockly.JavaScript.valueToCode(
+      block,
+      "speed",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var value_duration = Blockly.JavaScript.valueToCode(
+      block,
+      "duration",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var code = `postMessage({ command : "MOVE", lin : 0, ang : -${value_speed} });
+await new Promise(r => setTimeout(r,${value_duration}));
+postMessage({ command : "MOVE", lin : 0, ang : 0 });
+`;
+    return code;
+  };
+
+  Blockly.Blocks["move_turnright_in"] = {
+    init: function () {
+      this.appendValueInput("speed")
+        .setCheck("Number")
+        .appendField("Turn right speed");
+      this.appendValueInput("duration")
+        .setCheck("Number")
+        .appendField("duration");
+      this.appendDummyInput().appendField("ms");
+      this.setPreviousStatement(true, null);
+      this.setNextStatement(true, null);
+      this.setColour(230);
+      this.setTooltip("90 deg ~ 1700ms");
+      this.setHelpUrl("");
+    },
+  };
+  Blockly.JavaScript["move_turnright_in"] = function (block) {
+    var value_speed = Blockly.JavaScript.valueToCode(
+      block,
+      "speed",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var value_duration = Blockly.JavaScript.valueToCode(
+      block,
+      "duration",
+      Blockly.JavaScript.ORDER_ATOMIC
+    );
+    var code = `postMessage({ command : "MOVE", lin : 0, ang : ${value_speed} });
+await new Promise(r => setTimeout(r,${value_duration}));
+postMessage({ command : "MOVE", lin : 0, ang : 0 });
+`;
+    return code;
+  };
+
+  Blockly.Blocks["stop_move"] = {
+    init: function () {
+      this.appendDummyInput().appendField("stop robot");
+      this.setPreviousStatement(true, null);
+      this.setNextStatement(true, null);
+      this.setColour(230);
+      this.setTooltip("move robot ");
+      this.setHelpUrl("");
+    },
+  };
+  Blockly.JavaScript["stop_move"] = function (block) {
+    var code = `postMessage({ command : "MOVE", lin : 0, ang : 0 });\n`;
+    return code;
+  };
+
   Blockly.Blocks["delay"] = {
     init: function () {
       this.appendDummyInput()
@@ -220,6 +301,26 @@ export default (Blockly, that) => {
   Blockly.JavaScript["delay"] = function (block) {
     var number_ms = block.getFieldValue("ms");
     var code = "await new Promise(r => setTimeout(r," + number_ms + "));\n";
+    return code;
+  };
+
+  Blockly.Blocks["term_print"] = {
+    init: function () {
+      this.appendValueInput("text").setCheck(null).appendField("print");
+      this.setPreviousStatement(true, null);
+      this.setNextStatement(true, null);
+      this.setColour(160);
+      this.setTooltip("");
+      this.setHelpUrl("");
+    },
+  };
+  Blockly.JavaScript["term_print"] = function (block) {
+    var value_text = Blockly.JavaScript.valueToCode(
+      block,
+      "text",
+      Blockly.JavaScript.ORDER_NONE
+    );
+    var code = `postMessage({command:"PRINT", msg : ${value_text}+"\\r\\n"});\n`;
     return code;
   };
 };

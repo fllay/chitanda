@@ -1,13 +1,14 @@
 export default `<xml>
   <category name="Logic" css-icon="customIcon mdi mdi-cog" categorystyle="logic_category">
-      <block type="controls_if"></block>
-      <block type="logic_compare"></block>
-      <block type="logic_operation"></block>
-      <block type="logic_negate"></block>
-      <block type="logic_boolean"></block>
-      <block type="logic_null" disabled="true"></block>
-      <block type="logic_ternary"></block>
-    </category>
+    <block type="controls_if"></block>
+    <block type="logic_compare"></block>
+    <block type="logic_operation"></block>
+    <block type="logic_negate"></block>
+    <block type="logic_boolean"></block>
+    <block type="logic_null" disabled="true"></block>
+    <block type="logic_ternary"></block>
+  </category>
+
   <category name="Loops" categorystyle="loop_category">
     <block type="controls_repeat_ext">
       <value name="TIMES">
@@ -37,6 +38,7 @@ export default `<xml>
     <block type="controls_forEach"></block>
     <block type="controls_flow_statements"></block>
   </category>
+
   <category name="Math" categorystyle="math_category">
     <block type="math_number" gap="32">
       <field name="NUM">123</field>
@@ -138,6 +140,7 @@ export default `<xml>
       </value>
     </block>
   </category>
+
   <category name="Text" categorystyle="text_category">
     <block type="term_print">
       <value name="text">
@@ -233,6 +236,7 @@ export default `<xml>
       </value>
     </block>
   </category>
+
   <category name="Lists" categorystyle="list_category">
     <block type="lists_create_with">
       <mutation items="0"></mutation>
@@ -285,8 +289,11 @@ export default `<xml>
     <block type="lists_sort"></block>
     <block type="lists_reverse"></block>
   </category>
+
   <category name="Variables" categorystyle="variable_category" custom="VARIABLE"></category>
+  
   <category name="Functions" categorystyle="procedure_category" custom="PROCEDURE"></category>
+  
   <category name="Kidbright Bot" colour="%{BKY_LOOPS_HUE}">
     <block type="delay"></block>
     <block type="tfjs_classification_init_model"></block>
@@ -294,7 +301,9 @@ export default `<xml>
     <block type="tfjs_classification_get_class_name"></block>
     <block type="tfjs_classification_get_class_index"></block>
     <block type="tfjs_classification_get_class_prob"></block>
+    
     <label text="Simulator Robot" web-class="ioLabel"></label>
+    
     <block type="move"></block>
     <block type="move_forward_in">
       <value name="speed">

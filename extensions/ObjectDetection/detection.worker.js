@@ -1,5 +1,8 @@
 importScripts("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs");
 
+let processing = false;
+let sourceCode = "";
+
 const MAX_BOXES = 10;
 let __model = null;
 let __anchors = [];
@@ -7,6 +10,8 @@ let __labels = [];
 let __image = null;
 let __data = null;
 let __bboxes = [];
+let __iouth = 0.5;
+let __objth = 0.5;
 
 let responseCallback = null;
 let requestCommand = null;
@@ -34,7 +39,9 @@ const loadingModel = async function () {
   );
 };
 
-const initModel = async function () {
+const initModel = async function (iou_threshold, obj_threshold) {
+  __iouth = iou_threshold;
+  __objth = obj_threshold;
   postMessage({ command: "PRINT", msg: "Loading model\r\n" });
   await loadingModel();
   postMessage({ command: "PRINT", msg: "Loading labels\r\n" });
@@ -79,7 +86,7 @@ const __detect = async function (img, obj_threshold, iou_threshold) {
   let res = await __model.predict(batched);
   //TODO : check img.shape, may be cast to [img.shape[1],img.shape[0]]
   //console.log("img shape = ", img.shape);
-  let boxes = await yolo.postProcess(
+  let boxes = await postProcess(
     res,
     __anchors,
     __labels.length,
@@ -95,7 +102,8 @@ const __detect = async function (img, obj_threshold, iou_threshold) {
 const detect = async function () {
   __image = await requestData("IMAGE");
   let __image_tensor = await tf.browser.fromPixels(__image);
-  __bboxes = await __detect(__image_tensor);
+  __bboxes = await __detect(__image_tensor, __objth, __iouth);
+  postMessage({ command: "RESULT", data: __bboxes });
 };
 
 // this.result = __bboxes;
@@ -112,21 +120,6 @@ const detect = async function () {
 //   " ])" );
 // }
 
-onmessage = async (event) => {
-  if (event.data.command == "RUN") {
-    sourceCode = event.data.code;
-    __labels = event.data.labels;
-    if (!processing) {
-      processing = true;
-      process();
-    }
-  } else if (event.data.command == "RESPONSE") {
-    if (event.data.subcommand == requestCommand) {
-      responseCallback(event.data.data);
-    }
-  }
-};
-
 const process = function () {
   try {
     eval(sourceCode);
@@ -138,6 +131,21 @@ const process = function () {
   }
 };
 
+onmessage = async (event) => {
+  if (event.data.command == "RUN") {
+    sourceCode = event.data.code;
+    __labels = event.data.labels;
+    __anchors = event.data.anchors;
+    if (!processing) {
+      processing = true;
+      process();
+    }
+  } else if (event.data.command == "RESPONSE") {
+    if (event.data.subcommand == requestCommand) {
+      responseCallback(event.data.data);
+    }
+  }
+};
 //========== yolo decoder ===========//
 const yoloHead = function (feats, anchors, numClasses, inputShape) {
   const numAnchors = anchors.shape[0];
@@ -189,13 +197,13 @@ const yoloBoxesAndScores = function (
   inputShape,
   imageShape
 ) {
-  const [boxXy, boxWh, boxConfidence, boxClassProbs] = this.yoloHead(
+  const [boxXy, boxWh, boxConfidence, boxClassProbs] = yoloHead(
     feats,
     anchors,
     numClasses,
     inputShape
   );
-  let boxes = this.yoloCorrectBoxes(boxXy, boxWh, imageShape);
+  let boxes = yoloCorrectBoxes(boxXy, boxWh, imageShape);
   boxes = boxes.reshape([-1, 4]);
   let boxScores = tf.mul(boxConfidence, boxClassProbs);
   boxScores = tf.reshape(boxScores, [-1, numClasses]);
@@ -215,7 +223,7 @@ const postProcess = async function (
   const [boxes, boxScores] = tf.tidy(() => {
     const anchorsTensor = tf.tensor1d(anchors).reshape([-1, 2]);
     const inputShape = outputs.shape.slice(1, 3); //[7,10]
-    const [boxes, boxScores] = this.yoloBoxesAndScores(
+    const [boxes, boxScores] = yoloBoxesAndScores(
       outputs,
       anchorsTensor,
       numClasses,

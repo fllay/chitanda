@@ -17,9 +17,10 @@
             :captureKey="false"
             v-slot="instance"
           > 
-            <image-source-streamer ref="streamer" :source="instance"></image-source-streamer>
+            <image-source-streamer ref="streamer" :source="instance" :bbox="bboxes"></image-source-streamer>
           </simulator-input-source-controller>
         </div>
+        
         <div class="bottom-bar">
           <div class="terminal-container" id="terminal" ref="terminal"></div>
           <div class="button-container">
@@ -33,6 +34,7 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -49,7 +51,7 @@ import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import axios from "axios";
 import ImageSourceStreamer from "~/components/InputConnection/ImageSourceStreamer.vue";
-import runner from "../classify.worker.js";
+import runner from "../detection.worker.js";
 
 export default {
   name: "BlocklyComponent",
@@ -64,14 +66,15 @@ export default {
       isRunning: false,
       worker: null,
       toolbox: Toolbox,
-      block: Blocks
+      block: Blocks,
+      bboxes: []
     };
   },
   methods: {
-    handleRun: async function() {
+    handleRun : async function() {
       if (!this.isRunning) {
         this.isRunning = true;
-        await this.run();
+        this.run();
       } else {
         this.isRunning = false;
         this.stop();
@@ -99,6 +102,8 @@ export default {
         this.term.write(event.data.msg);
         this.isRunning = false;
         this.stop();
+      }else if(event.data.command == "RESULT"){
+        this.bboxes = event.data.data;
       }
     },
     onWorkerError(err){
@@ -127,13 +132,27 @@ export default {
         weight: weightData
       }
     },
-    run : async function() {
+     async getLabels() {
+      const __label_res = await axios.get(this.project.labelFile);
+      const __labels_text = __label_res.data;
+      let labels = __labels_text
+        .replaceAll("\r", "")
+        .split(",")
+        .map((el) => el.trim())
+        .filter((el) => el);
+      return labels;
+    },
+    run: async function() {
       this.term.write("Running ...\r\n");
       //========== start worker ==============//
       this.worker = new runner();
       this.worker.onerror = this.onWorkerError.bind(this);
       this.worker.onmessage = this.processCommand.bind(this);
       let labels = this.project.modelLabel;
+      if(Array.isArray(labels) && labels.length == 0){
+        labels = await this.getLabels();
+      }
+      let anchors = this.project.anchors;
       //========== load tfjs model ===========//
       this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("1");
       var code = this.project.code;
@@ -143,7 +162,7 @@ export default {
       })();`;
       console.log(codeAsync);
       try {
-        this.worker.postMessage({ command: "RUN", code: codeAsync, labels : labels });
+        this.worker.postMessage({ command: "RUN", code: codeAsync, labels : labels, anchors : anchors });
       } catch (error) {
         console.log(error);
       }
@@ -153,6 +172,7 @@ export default {
       this.$refs.simulator.$refs.gameInstance.contentWindow.MSG_RunProgram("0");
       //========== stop web worker ======//
       this.worker.terminate();
+      this.bboxes = [];
     },
   },
   computed: {
@@ -163,8 +183,8 @@ export default {
     const fitAddon = new FitAddon();
     this.term.loadAddon(fitAddon);
     this.term.open(this.$refs.terminal);
+    //this.term.write("$ ");
     fitAddon.fit();
-    console.log("model tfjs path : ", this.project.tfjs);
     this.term.write("$ ");
   },
 };

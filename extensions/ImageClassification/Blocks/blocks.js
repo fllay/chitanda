@@ -41,7 +41,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_classification_get_class_name"] = function (block) {
-    var code = "__labels[__maxIndex]";
+    var code = "(__data ? __labels[__maxIndex] : null)";
     return [code, Blockly.JavaScript.ORDER_NONE];
   };
 
@@ -55,7 +55,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_classification_get_class_prob"] = function (block) {
-    var code = "__data[__maxIndex]";
+    var code = "(__data ? __data[__maxIndex] : null)";
     return [code, Blockly.JavaScript.ORDER_ATOMIC];
   };
 
@@ -69,7 +69,7 @@ export default (Blockly, that) => {
     },
   };
   Blockly.JavaScript["tfjs_classification_get_class_index"] = function (block) {
-    var code = "__maxIndex";
+    var code = "(__data ? __maxIndex : -1)";
     return [code, Blockly.JavaScript.ORDER_NONE];
   };
 
